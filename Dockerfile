@@ -15,4 +15,4 @@ RUN echo "standaloneEnabled=false" >> ./conf/zoo.cfg
 RUN echo "dynamicConfigFile=/opt/zookeeper/conf/zoo.cfg.dynamic" >> ./conf/zoo.cfg
 
 ADD zk-init.sh /usr/local/bin/
-#ENTRYPOINT ["zk-init.sh"]
+ENTRYPOINT ["zk-init.sh"]
