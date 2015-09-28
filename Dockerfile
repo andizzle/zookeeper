@@ -1,18 +1,21 @@
 FROM ubuntu:15.10
 
-RUN apt-get update && \
-apt-get install -y curl openjdk-8-jdk git ant && \
-apt-get clean
+RUN apt-get update \
+&& apt-get install -y openjdk-7-jre-headless wget \
+&& apt-get clean
 
-RUN git clone https://github.com/apache/zookeeper.git /opt/zookeeper
+RUN wget -q -O - http://apache.mirrors.pair.com/zookeeper/zookeeper-3.5.1-alpha/zookeeper-3.5.1-alpha.tar.gz | tar -xzf - -C /opt \
+&& mv /opt/zookeeper-3.5.1-alpha /opt/zookeeper
+
+ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 
 WORKDIR /opt/zookeeper
 
-RUN git checkout release-3.5.1
-RUN ant jar
 RUN cp ./conf/zoo_sample.cfg ./conf/zoo.cfg
 RUN echo "standaloneEnabled=false" >> ./conf/zoo.cfg
 RUN echo "dynamicConfigFile=/opt/zookeeper/conf/zoo.cfg.dynamic" >> ./conf/zoo.cfg
+
+VOLUME ["/opt/zookeeper/conf", "/tmp/zookeeper"]
 
 ADD zk-init.sh /usr/local/bin/
 ENTRYPOINT ["zk-init.sh"]
