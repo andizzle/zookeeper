@@ -9,8 +9,6 @@ RUN wget -q -O - http://apache.mirrors.pair.com/zookeeper/zookeeper-3.5.1-alpha/
 
 ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 
-EXPOSE 2181 2888 3888
-
 WORKDIR /opt/zookeeper
 
 RUN cp ./conf/zoo_sample.cfg ./conf/zoo.cfg
