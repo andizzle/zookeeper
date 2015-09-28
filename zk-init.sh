@@ -21,7 +21,7 @@ function config {
         if ! [[ $MYID =~ $RE ]]; then
             # get all participants' id
             ids=$(cat conf/zoo.cfg.dynamic | grep -Eo '[0-9]{1,3}=' | awk -F'=' '{print $1}')
-            MYID=$(next_id $ids)
+            MYID=$(next_id "${ids[*]}")
         fi
 
         echo "server.$MYID=$IPADDRESS:2888:3888:observer;2181" >> conf/zoo.cfg.dynamic
@@ -42,32 +42,29 @@ function config_follower {
         ZOO_LOG_DIR=/var/log ZOO_LOG4J_PROP='INFO,CONSOLE,ROLLINGFILE' bin/zkServer.sh start
         bin/zkCli.sh -server $ZK:2181 reconfig -add "server.$MYID=$IPADDRESS:2888:3888:participant;2181"
         bin/zkServer.sh stop
-        echo $MYID
     fi
 }
 
 # id generate
 function next_id {
     next_id=1
-    tmp_id=1
     ids=$1
 
-    while [ "$tmp_id" -lt 256 ]; do
+    while [ "$next_id" -lt 256 ]; do
         exist=false
 
-        for id in $ids; do
+        for id in ${ids[*]}; do
             if [ "$next_id" -eq "$id" ]; then
-                tmp_id=$next_id
                 exist=true
                 break
             fi
         done
 
         if ! $exist; then
-            tmp_id=256
+            break
+        else
+            let "next_id++"
         fi
-
-        let "next_id++"
     done
     echo $next_id
 }
