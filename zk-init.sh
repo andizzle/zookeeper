@@ -3,9 +3,7 @@
 set -e
 
 ZK=$2
-MYID=$3
 
-HOSTNAME=`hostname`
 IPADDRESS=`/sbin/ip route|awk '/eth1/ { print $9 }'`
 
 RE="^[0-9]+$"
@@ -17,12 +15,10 @@ function config {
 
         echo "`bin/zkCli.sh -server $ZK:2181 get /zookeeper/config|grep ^server`" >> conf/zoo.cfg.dynamic
 
-        # if no MYID specified, pick one
-        if ! [[ $MYID =~ $RE ]]; then
-            # get all participants' id
-            ids=$(cat conf/zoo.cfg.dynamic | grep -Eo '[0-9]{1,3}=' | awk -F'=' '{print $1}')
-            MYID=$(next_id "${ids[*]}")
-        fi
+        # get all participants' id
+        ids=$(cat conf/zoo.cfg.dynamic | grep -Eo '[0-9]{1,3}=' | awk -F'=' '{print $1}')
+        # always get new id
+        MYID=$(next_id "${ids[*]}")
 
         echo "server.$MYID=$IPADDRESS:2888:3888:observer;2181" >> conf/zoo.cfg.dynamic
         cp conf/zoo.cfg.dynamic conf/zoo.cfg.dynamic.org
@@ -62,9 +58,8 @@ function next_id {
 
         if ! $exist; then
             break
-        else
-            let "next_id++"
         fi
+        let "next_id++"
     done
     echo $next_id
 }
