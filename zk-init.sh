@@ -64,6 +64,50 @@ function next_id {
     echo $next_id
 }
 
+function prepareAWS {
+    region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq --raw-output .region)
+    if [[ ! $region ]]; then
+        echo "$pkg: failed to get region"
+        exit 1
+    fi
+
+    instance_id=$(curl -s http://169.254.169.254/latest/meta-data/instance-id)
+    if [[ ! $instance_id ]]; then
+        echo "$pkg: failed to get instance id from instance metadata"
+        exit 2
+    fi
+
+    instance_ip=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
+    if [[ ! $instance_ip ]]; then
+        echo "$pkg: failed to get instance IP address"
+        exit 3
+    fi
+
+    asg_name=$(aws autoscaling describe-auto-scaling-groups --region $region | jq --raw-output ".[] | map(select(.Instances[].InstanceId | contains(\"$ec2_instance_id\"))) | .[].AutoScalingGroupName")
+    if [[ ! $asg_name ]]; then
+        echo "$pkg: failed to get the auto scaling group name"
+        exit 4
+    fi
+
+    peer_ips=$(aws ec2 describe-instances --region $region --instance-ids $(aws autoscaling describe-auto-scaling-groups --region $region --auto-scaling-group-name $asg_name | jq '.AutoScalingGroups[0].Instances[] | select(.LifecycleState  == "InService") | .InstanceId' | xargs) | jq -r ".Reservations[].Instances | map(.NetworkInterfaces[].PrivateIpAddress)[]")
+    if [[ ! $peer_ips ]]; then
+        echo "$pkg: unable to find members of auto scaling group"
+        exit 5
+    fi
+
+    echo "zookeeper_peer_urls=$peer_ips"
+}
+
+case "$provider" in
+    "aws")
+        pkg="zookeeper-aws-cluster"
+        prepareAWS
+        ;;
+    *)
+        instance_ip=`/sbin/ip route|awk '/eth1/ { print $9 }'`
+        ;;
+esac
+
 # start the zookeeper if the param is an id
 if ! [ -n "$1" ] || [ "$1" = 'init' ]; then
 
