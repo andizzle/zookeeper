@@ -9,7 +9,7 @@ RE="^[0-9]+$"
 
 # config single or cluster
 function config {
-    if [ -n "$zookeeper_good_member_ip" || $peer_ips]; then
+    if [[ "$zookeeper_good_member_ip" || "$peer_ips" ]]; then
         if [[ $peer_ips ]]; then
             for peer_ip in $peer_ips; do
                 case "$peer_ip" in
