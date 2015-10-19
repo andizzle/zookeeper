@@ -99,7 +99,7 @@ function prepareAWS {
         exit 3
     fi
 
-    asg_name=$(aws autoscaling describe-auto-scaling-groups --region $region | jq --raw-output ".[] | map(select(.Instances[].InstanceId | contains(\"$ec2_instance_id\"))) | .[].AutoScalingGroupName")
+    asg_name=$(aws autoscaling describe-auto-scaling-groups --region $region | jq --raw-output ".[] | map(select(.Instances[].InstanceId | contains(\"$instance_id\"))) | .[].AutoScalingGroupName")
     if [[ ! $asg_name ]]; then
         echo "$pkg: failed to get the auto scaling group name"
         exit 4
