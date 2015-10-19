@@ -1,7 +1,7 @@
 FROM ubuntu:15.10
 
 RUN apt-get update \
-&& apt-get install -y openjdk-7-jre-headless wget iproute2 curl jq \
+&& apt-get install -y openjdk-7-jre-headless wget iproute2 curl jq awscli \
 && apt-get clean
 
 RUN wget -q -O - http://apache.mirrors.pair.com/zookeeper/zookeeper-3.5.1-alpha/zookeeper-3.5.1-alpha.tar.gz | tar -xzf - -C /opt \
