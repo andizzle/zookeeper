@@ -70,16 +70,10 @@ function next_id {
 }
 
 # start the zookeeper if the param is an id
-if ! [ -n "$1" ] || [ "$1" = 'init' ]; then
+cd /opt/zookeeper
 
-    cd /opt/zookeeper
+config
 
-    config
+config_follower
 
-    config_follower
-
-    ZOO_LOG_DIR=/var/log ZOO_LOG4J_PROP='INFO,CONSOLE,ROLLINGFILE' /opt/zookeeper/bin/zkServer.sh --config /opt/zookeeper/conf start-foreground
-
-fi
-
-exec "$@"
+ZOO_LOG_DIR=/var/log ZOO_LOG4J_PROP='INFO,CONSOLE,ROLLINGFILE' /opt/zookeeper/bin/zkServer.sh --config /opt/zookeeper/conf start-foreground
