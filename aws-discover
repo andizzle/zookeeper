@@ -1,86 +1,7 @@
 #!/bin/bash
 set -e
 
-zookeeper_good_member_ip=$2
-zookeeper_server_port=2181
-provider=$3
-
-RE="^[0-9]+$"
-
-# config single or cluster
-function config {
-    if [[ "$zookeeper_good_member_ip" || "$peer_ips" ]]; then
-        if [[ $peer_ips ]]; then
-            for peer_ip in $peer_ips; do
-                case "$peer_ip" in
-                    *$instance_ip*) continue;;
-                esac
-
-                zookeeper_members=$(bin/zkCli.sh -server $peer_ip:$zookeeper_server_port get /zookeeper/config|grep ^server)
-
-                if [[ $? == 0 && $zookeeper_members ]]; then
-                    zookeeper_good_member_ip="$peer_ip"
-                    echo "zookeeper_members=$zookeeper_members"
-                    break
-                fi
-            done
-        else
-            zookeeper_members=$(bin/zkCli.sh -server $peer_ip:$zookeeper_server_port get /zookeeper/config|grep ^server)
-        fi
-
-        # join an existing cluster
-        echo $zookeeper_members >> conf/zoo.cfg.dynamic
-
-        # get all participants' id
-        ids=$(cat conf/zoo.cfg.dynamic | grep -Eo '[0-9]{1,3}=' | awk -F'=' '{print $1}')
-        # always get new id
-        MYID=$(next_id "${ids[*]}")
-
-        echo "server.$MYID=$instance_ip:2888:3888:observer;$zookeeper_server_port" >> conf/zoo.cfg.dynamic
-        cp conf/zoo.cfg.dynamic conf/zoo.cfg.dynamic.org
-    else
-        # start a new cluster
-        if ! [[ $MYID =~ $RE ]]; then
-            MYID=1
-        fi
-        echo "server.$MYID=$instance_ip:2888:3888;$zookeeper_server_port" >> conf/zoo.cfg.dynamic
-    fi
-    bin/zkServer-initialize.sh --configfile=/opt/zookeeper/conf/zoo.cfg --force --myid=$MYID
-}
-
-# config follower when join a cluster
-function config_follower {
-    if [ -n "$zookeeper_good_member_ip" ]; then
-        ZOO_LOG_DIR=/var/log ZOO_LOG4J_PROP='INFO,CONSOLE,ROLLINGFILE' bin/zkServer.sh start
-        bin/zkCli.sh -server $zookeeper_good_member_ip:$zookeeper_server_port reconfig -add "server.$MYID=$instance_ip:2888:3888:participant;$zookeeper_server_port"
-        bin/zkServer.sh stop
-    fi
-}
-
-# id generate
-function next_id {
-    next_id=1
-    ids=$1
-
-    while [ "$next_id" -lt 256 ]; do
-        exist=false
-
-        for id in ${ids[*]}; do
-            if [ "$next_id" -eq "$id" ]; then
-                exist=true
-                break
-            fi
-        done
-
-        if ! $exist; then
-            break
-        fi
-        let "next_id++"
-    done
-    echo $next_id
-}
-
-function prepareAWS {
+function aws_ips {
     region=$(curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq --raw-output .region)
     if [[ ! $region ]]; then
         echo "$pkg: failed to get region"
@@ -111,30 +32,5 @@ function prepareAWS {
         exit 5
     fi
 
-    echo "zookeeper_peer_urls=$peer_ips"
+    echo $peer_ips
 }
-
-case "$provider" in
-    "aws")
-        pkg="zookeeper-aws-cluster"
-        prepareAWS
-        ;;
-    *)
-        instance_ip=`/sbin/ip route|awk '/eth1/ { print $9 }'`
-        ;;
-esac
-
-# start the zookeeper if the param is an id
-if ! [ -n "$1" ] || [ "$1" = 'init' ]; then
-
-    cd /opt/zookeeper
-
-    config
-
-    config_follower
-
-    ZOO_LOG_DIR=/var/log ZOO_LOG4J_PROP='INFO,CONSOLE,ROLLINGFILE' /opt/zookeeper/bin/zkServer.sh --config /opt/zookeeper/conf start-foreground
-
-fi
-
-exec "$@"

@@ -1,12 +1,21 @@
 #!/bin/bash
-
 set -e
+
+source /usr/local/bin/aws-discover
 
 ZK=$2
 MYID=1
 
 HOSTNAME=`hostname`
-IPADDRESS=`/sbin/ip route|awk '/eth1/ { print $9 }'`
+
+case "$PROVIDER" in
+    "aws")
+        IPADDRESS=`aws_ips`
+        ;;
+    *)
+        IPADDRESS=`/sbin/ip route|awk '/eth1/ { print $9 }'`
+        ;;
+esac
 
 RE="^[0-9]+$"
 

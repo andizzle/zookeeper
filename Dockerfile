@@ -15,4 +15,5 @@ RUN cp ./conf/zoo_sample.cfg ./conf/zoo.cfg
 RUN echo "standaloneEnabled=false" >> ./conf/zoo.cfg
 RUN echo "dynamicConfigFile=/opt/zookeeper/conf/zoo.cfg.dynamic" >> ./conf/zoo.cfg
 
+ADD aws-discover /usr/local/bin/
 ADD zk-init /usr/local/bin/
